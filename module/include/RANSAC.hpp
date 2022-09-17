@@ -44,6 +44,10 @@ protected:
 
     double threshold_;
 
+    double eta_ = 0.05, psi_ = 0.05, beta_ = 0.1;
+    double max_outlier_ = 0.6;
+    double p_ = 0.99;
+
 public:
     // PROSAC() {};
     PROSAC(std::vector<std::vector<cv::DMatch>> matches,
@@ -107,6 +111,24 @@ public:
     {
         return model_;
     }
+
+    auto maximality()
+    {
+        int n_inlier = static_cast<int>((1 - max_outlier_) * N_);
+
+        double Pi{1.0};
+        for(int i = 0; i < m_; ++i)
+        {
+            Pi *= (n_inlier - i) / (N_ - i);
+        }
+
+        return std::log10(eta_) / std::log10(1 - Pi);
+    }
+
+    // auto non_randomness()
+    // {
+    //     ()
+    // }
 };
 
 #endif

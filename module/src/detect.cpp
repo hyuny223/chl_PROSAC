@@ -4,6 +4,7 @@
 #include "opencv2/opencv.hpp"
 
 #include "detect.hpp"
+#include "chrono"
 
 DetectMatch::DetectMatch(const std::string &path)
 {
@@ -45,6 +46,8 @@ void DetectMatch::show(Eigen::MatrixXd H)
                  H(2, 0), H(2, 1), H(2, 2));
     cv::Mat dst, tmp1;
 
+
+    auto s = std::chrono::steady_clock::now();
     std::vector<cv::Point2f> k1,k2;
     std::vector<cv::DMatch> good;
     for(int i =0; i < matches_.size(); ++i)
@@ -61,7 +64,10 @@ void DetectMatch::show(Eigen::MatrixXd H)
         k2.push_back(keys2_[g.trainIdx].pt);
     }
     auto tmp = cv::findHomography(k1, k2);
-    // cv::warpPerspective(mTargetImage, panoramaImage, mHomography, size, cv::INTER_LANCZOS4); // 오른쪽으로만 크기가 커지는 문제
+    auto e = std::chrono::steady_clock::now();
+    std::chrono::duration<double> t = e - s;
+    std::cout << "opencv : " << t.count() << std::endl;
+
     cv::warpPerspective(curr_, dst, h, curr_.size(), cv::INTER_LANCZOS4);
     cv::warpPerspective(curr_, tmp1, tmp, curr_.size(), cv::INTER_LANCZOS4);
 

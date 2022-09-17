@@ -110,8 +110,9 @@ void Homography::computeRMSE()
         lowest = e > lowest? e : lowest; // 이게 원래 논문 방식. lowest가 error가 크다는 의미.
     }
 
-    // std::cout << "RMSE : " << error / len << std::endl;
-    // std::cout << "lowest : " << lowest << std::endl;
+    std::cout << "The number of points : " << len << std::endl;
+    std::cout << "RMSE : " << error / len << std::endl;
+    std::cout << "lowest : " << lowest << std::endl;
 
     error_ = error / len;
 }

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(OpenCV 4.5.5 REQUIRED)
 find_package(Eigen3 3.4.0 REQUIRED)
+find_package(easy_profiler REQUIRED HINTS ${CMAKE_SOURCE_DIR}/Thirdparty/profiler/install/lib/cmake/easy_profiler)
 
 add_subdirectory(module)
 
@@ -15,10 +16,12 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         module/include
         ${OpenCV_INCLUDE_DIRS}
         ${Eigen_INCLUDE_DIRS}
+        ${easy_profiler_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
         module
         ${OpenCV_LIBS}
         Eigen3::Eigen
+        easy_profiler
 )

@@ -20,20 +20,29 @@ protected:
     Eigen::MatrixXd C_;
     Eigen::MatrixXd curr_, next_, pred_;
     std::vector<std::vector<cv::DMatch>> sorted_;
+    std::vector<cv::Point2f> left_, right_;
     std::vector<cv::KeyPoint> keys1_, keys2_;
+    std::vector<int> indices_;
 
     double error_;
+    double res_th_{10.0};
+    int inliers_{0}, n_;
 
 public:
     Homography() = default;
-    void run(const std::vector<std::vector<cv::DMatch>>& sorted,
-             const std::vector<cv::KeyPoint>& keys1,
-             const std::vector<cv::KeyPoint>& keys2);
+    void set(const std::vector<std::vector<cv::DMatch>>& sorted,
+             const std::vector<cv::KeyPoint> &keys1,
+             const std::vector<cv::KeyPoint> &keys2);
+    bool check(int n);
+    void sampling(std::mt19937 &gen);
+    void run(int n, std::mt19937 &gen);
     void computeSVD();
     void computeB();
     void computeC(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd);
     void compute2D();
+    void computeInliers();
     void computeRMSE();
+    double getInliers();
     double getError();
     Eigen::MatrixXd &getHomography();
 };

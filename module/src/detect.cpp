@@ -2,12 +2,14 @@
 #include <tuple>
 
 #include "opencv2/opencv.hpp"
+#include "easy/profiler.h"
 
 #include "detect.hpp"
 #include "chrono"
 
 DetectMatch::DetectMatch(const std::string &path)
 {
+    EASY_FUNCTION(profiler::colors::Magenta);
     std::string c = path + "left.png";
     std::string n = path + "right.png";
 
@@ -17,6 +19,7 @@ DetectMatch::DetectMatch(const std::string &path)
 
 void DetectMatch::detectFeatures()
 {
+    EASY_FUNCTION(profiler::colors::Magenta);
     cv::Ptr<cv::Feature2D> detector;
     if (mode_ == "SIFT")
     {
@@ -28,13 +31,14 @@ void DetectMatch::detectFeatures()
     }
 
     cv::Mat mask;
-
+    EASY_BLOCK("detectAndCompute", profiler::colors::Blue500);
     detector->detectAndCompute(curr_, mask, keys1_, desc1_);
     detector->detectAndCompute(next_, mask, keys2_, desc2_);
 }
 
 void DetectMatch::match()
 {
+    EASY_FUNCTION(profiler::colors::Magenta);
     cv::FlannBasedMatcher matcher = cv::FlannBasedMatcher(cv::makePtr<cv::flann::KDTreeIndexParams>(5));
     matcher.knnMatch(desc1_, desc2_, matches_, 2);
 }
@@ -48,6 +52,7 @@ void DetectMatch::show(Eigen::MatrixXd H)
 
 
     auto s = std::chrono::steady_clock::now();
+    EASY_BLOCK("opencv", profiler::colors::Blue500);
     std::vector<cv::Point2f> k1,k2;
     std::vector<cv::DMatch> good;
     for(int i =0; i < matches_.size(); ++i)
@@ -67,7 +72,7 @@ void DetectMatch::show(Eigen::MatrixXd H)
     auto e = std::chrono::steady_clock::now();
     std::chrono::duration<double> t = e - s;
     std::cout << "opencv : " << t.count() << std::endl;
-
+    EASY_END_BLOCK;
     cv::warpPerspective(curr_, dst, h, curr_.size(), cv::INTER_LANCZOS4);
     cv::warpPerspective(curr_, tmp1, tmp, curr_.size(), cv::INTER_LANCZOS4);
 

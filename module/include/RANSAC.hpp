@@ -9,6 +9,7 @@
 #include <random>
 
 #include "opencv2/opencv.hpp"
+#include "easy/profiler.h"
 
 #include "detect.hpp"
 
@@ -37,8 +38,8 @@ protected:
     std::vector<std::vector<cv::DMatch>> sorted_, n_match_, m_match_;
     std::vector<cv::KeyPoint> keys1_, keys2_;
 
-    double best_model_err_ = std::numeric_limits<double>::infinity();
-    double candidate_model_err_ = std::numeric_limits<double>::infinity();
+    double best_model_inliers_ = std::numeric_limits<double>::lowest();
+    double candidate_model_inliers_ = std::numeric_limits<double>::lowest();
 
     int iteration_;
     int N_, n_, m_, ns_, TN_;
@@ -57,32 +58,48 @@ public:
            const int &iteration,
            const double &threshold,
            MODEL &model)
-        : keys1_(keys1), keys2_(keys2), iteration_(iteration), threshold_(threshold), model_(model)
+        : keys1_(keys1), keys2_(keys2), iteration_(iteration), model_(model)
     {
+        EASY_BLOCK("PROSAC INITIALIZE", profiler::colors::Blue500);
         N_ = matches.size();
+        threshold_ = N_ * threshold;
         n_ = 4;
         m_ = 4;
         Tn_ = 1.0;
         Tpn_ = 1.0;
 
         // 퀄리티가 좋은게 뒤로 가게 함으로써 vector에서 pop하기 좋게 만든다.
+        // deque으로 하는게 좋은지, 선입선출, 후입선출 뭐가 좋은지 전부 수행해보면 좋을 듯.
+        EASY_BLOCK("sorting", profiler::colors::Blue500);
         std::sort(matches.begin(), matches.end(), [](auto i, auto j)
-                  { return i[0].distance / i[1].distance > j[0].distance / j[1].distance ? 1 : 0; });
+                  { return i[0].distance / i[1].distance < j[0].distance / j[1].distance ? 1 : 0; });
+        EASY_END_BLOCK; 
         sorted_ = matches;
+        EASY_BLOCK("model_set", profiler::colors::Blue500);
+        model_.set(matches, keys1, keys2);
+        EASY_END_BLOCK; 
+
     }
 
     MODEL run()
     {
+        EASY_FUNCTION(profiler::colors::Magenta);
         std::random_device rd;
         std::mt19937 gen(rd());
-
-        for (int t = 0; t < iteration_; ++t)
+        EASY_BLOCK("iteration", profiler::colors::Blue500);
+        for (int t = 1; t < iteration_; ++t)
         {
+            std::cout << "n_ : " << n_ << std::endl;
+            std::cout << "m_ : " << m_ << std::endl;
+            std::cout << "Tpn_ :" << Tpn_ << std::endl;
 
             // 1. Choice of the hypothesis genration set
-            if (t == Tpn_ && n_ < N_)
+            if (t == static_cast<int>(Tpn_) && n_ < N_)
             {
                 n_ += 1;
+                double Tnn_ = (n_ + 1.0) / (n_ + 1.0 - m_) * Tn_;
+                Tpn_ = Tpn_ + Tnn_ - Tn_;
+                Tn_ = Tnn_;
             }
 
             // 2. Semi-random sample M of size m
@@ -92,60 +109,43 @@ public:
                 m_ -= 1;
             }
             // else select m poins from U_{n} at random
-            makeSubset(); // N개 중 top n개의 subset을 만든다.
-            sampling();   // n개 중 m개를 무직위 샘플링
 
             // 3. Model parameter estimation
-            if (iterate())
+            EASY_BLOCK("iterate", profiler::colors::Blue500);
+            if (iterate(gen))
             {
-                if (best_model_err_ < threshold_)
+                if (best_model_inliers_ > threshold_)
                 {
                     std::cout << "model!" << std::endl;
                     return model_;
                 }
-                if (model_.getError() < candidate_model_err_)
+                if (model_.getInliers() > candidate_model_inliers_)
                 {
                     candidate_ = model_;
                 }
             }
-            // 4. Compute Tpn_
-            double Tnn_ = (n_ + 1.0) / (n_ + 1.0 - m) * Tn_;
-            double Tpn_ = Tpn_ + Tnn_ - Tn_;
-            Tn_ = Tnn_;
-
-            ++m_;
+            EASY_END_BLOCK; 
+            // m값 복구
+            m_ = 4;
         }
         std::cout << "candidate!" << std::endl;
         return candidate_;
     }
-    bool iterate()
+    bool iterate(std::mt19937 &gen)
     {
-        model_.run(m_match_, keys1_, keys2_);
-        auto err = model_.getError();
+        EASY_FUNCTION(profiler::colors::Magenta);
+        EASY_BLOCK("model run", profiler::colors::Blue500);
+        model_.run(n_, gen);
+        EASY_END_BLOCK;
+        auto inliers = model_.getInliers();
+        std::cout << "the number of inliers : " << inliers << std::endl;
 
-        if (err < best_model_err_)
+        if (inliers > best_model_inliers_)
         {
-            best_model_err_ = err;
+            best_model_inliers_ = inliers;
             return true;
         }
         return false;
-    }
-
-    void makeSubset()
-    {
-        // 최소 5개부터는 시작해야 호모그래피를 찾을 수 있음
-        // 지금은 슬라이싱으로 하고 있는데, 기존 벡터에 뒤에 하나만 덫붙이는 방식으로 가능할 듯
-        if (n_ == 10)
-        {
-            for (int i = 0; i < n_; ++i)
-            {
-                n_match_.push_back(sorted_.back());
-                sorted_.pop_back();
-            }
-            return;
-        }
-        n_match_.push_back(sorted_.back());
-        sorted_.pop_back();
     }
 
     MODEL &getModel()
@@ -170,19 +170,6 @@ public:
     // {
     //     ()
     // }
-
-    auto sampling(cstd::mt19937 &gen)
-    {
-        std::uniform_int_distribution<int> dis(0, m_ - 1); // n개의 subset 중 m개를 샘플링
-
-        m_match_.clear();
-        m_match_.reserve(m_);
-
-        for (int i = 0; i < m_; ++i)
-        {
-            m_match_.push_back(n_matche_[gen(dis)]); // 중복 검사 안 해줘도 될까?
-        }
-    }
 };
 
 #endif

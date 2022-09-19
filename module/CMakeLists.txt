@@ -11,6 +11,8 @@ set(MODULE_SOURCE_FILES
 
 find_package(OpenCV 4.5.5 REQUIRED)
 find_package(Eigen3 3.4.0 REQUIRED)
+find_package(easy_profiler REQUIRED HINTS ${CMAKE_SOURCE_DIR}/Thirdparty/profiler/install/lib/cmake/easy_profiler)
+
 
 add_library(${PROJECT_NAME}
     ${MODULE_SOURCE_FILES}
@@ -20,9 +22,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     include
     ${OpenCV_INCLUDE_DIRS}
     ${Eigen_INCLUDE_DIRS}
+    ${easy_profiler_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     ${OpenCV_LIBS}
     Eigen3::Eigen
+    easy_profiler
 )

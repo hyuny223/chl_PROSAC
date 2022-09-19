@@ -24,9 +24,11 @@ protected:
     std::vector<cv::KeyPoint> keys1_, keys2_;
     std::vector<int> indices_;
 
-    double error_;
     double res_th_{10.0};
-    int inliers_{0}, n_;
+    int n_;
+public:
+    double error_;
+    int inliers_{0};
 
 public:
     Homography() = default;
@@ -42,8 +44,8 @@ public:
     void compute2D();
     void computeInliers();
     void computeRMSE();
-    double getInliers();
-    double getError();
+    // double getInliers();
+    // double getError();
     Eigen::MatrixXd &getHomography();
 };
 

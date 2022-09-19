@@ -40,6 +40,8 @@ protected:
 
     double best_model_inliers_ = std::numeric_limits<double>::lowest();
     double candidate_model_inliers_ = std::numeric_limits<double>::lowest();
+    double lowest_model_error_ = std::numeric_limits<double>::infinity();
+    double candidate_model_error_ = std::numeric_limits<double>::infinity();
 
     int iteration_;
     int N_, n_, m_, ns_, TN_;
@@ -73,12 +75,11 @@ public:
         EASY_BLOCK("sorting", profiler::colors::Blue500);
         std::sort(matches.begin(), matches.end(), [](auto i, auto j)
                   { return i[0].distance / i[1].distance < j[0].distance / j[1].distance ? 1 : 0; });
-        EASY_END_BLOCK; 
+        EASY_END_BLOCK;
         sorted_ = matches;
         EASY_BLOCK("model_set", profiler::colors::Blue500);
         model_.set(matches, keys1, keys2);
-        EASY_END_BLOCK; 
-
+        EASY_END_BLOCK;
     }
 
     MODEL run()
@@ -89,9 +90,9 @@ public:
         EASY_BLOCK("iteration", profiler::colors::Blue500);
         for (int t = 1; t < iteration_; ++t)
         {
-            std::cout << "n_ : " << n_ << std::endl;
-            std::cout << "m_ : " << m_ << std::endl;
-            std::cout << "Tpn_ :" << Tpn_ << std::endl;
+            // std::cout << "n_ : " << n_ << std::endl;
+            // std::cout << "m_ : " << m_ << std::endl;
+            // std::cout << "Tpn_ :" << Tpn_ << std::endl;
 
             // 1. Choice of the hypothesis genration set
             if (t == static_cast<int>(Tpn_) && n_ < N_)
@@ -119,12 +120,19 @@ public:
                     std::cout << "model!" << std::endl;
                     return model_;
                 }
-                if (model_.getInliers() > candidate_model_inliers_)
+                if (model_.inliers_ > candidate_model_inliers_)
                 {
                     candidate_ = model_;
                 }
+                else if (model_.inliers_ == candidate_model_inliers_)
+                {
+                    if(model_.error_ < candidate_model_error_)
+                    {
+                        candidate_ = model_;
+                    }
+                }
             }
-            EASY_END_BLOCK; 
+            EASY_END_BLOCK;
             // m값 복구
             m_ = 4;
         }
@@ -137,13 +145,22 @@ public:
         EASY_BLOCK("model run", profiler::colors::Blue500);
         model_.run(n_, gen);
         EASY_END_BLOCK;
-        auto inliers = model_.getInliers();
-        std::cout << "the number of inliers : " << inliers << std::endl;
+        std::cout << "the number of inliers : " << model_.inliers_ << std::endl;
+        std::cout << "the lowest error of model : " << model_.error_ << std::endl;
+        std::cout << "---------" << std::endl;
 
-        if (inliers > best_model_inliers_)
+        if (model_.inliers_ > best_model_inliers_)
         {
-            best_model_inliers_ = inliers;
+            best_model_inliers_ = model_.inliers_ ;
+            lowest_model_error_ = model_.error_;
             return true;
+        }
+        else if (model_.inliers_  == best_model_inliers_)
+        {
+            if(model_.error_ < lowest_model_error_)
+            {
+                return true;
+            }
         }
         return false;
     }
@@ -168,7 +185,6 @@ public:
 
     // auto non_randomness()
     // {
-    //     ()
     // }
 };
 

@@ -31,5 +31,5 @@ int main(int argc, char** argv)
 
     auto model = prosac.getModel();
     dm.show(model.getHomography());
-    // profiler::dumpBlocksToFile("../profiler/test_profile.prof");
+    profiler::dumpBlocksToFile("../profiler/thin_profile.prof");
 }

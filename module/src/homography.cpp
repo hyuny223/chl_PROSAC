@@ -101,6 +101,7 @@ void Homography::computeSVD()
     EASY_END_BLOCK;
     EASY_BLOCK("decomposition", profiler::colors::Blue500);
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(B_, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    // Eigen::JacobiSVD<Eigen::MatrixXd> svd(B_, Eigen::ComputeThinU | Eigen::ComputeThinV);
     EASY_END_BLOCK;
     EASY_BLOCK("compute C", profiler::colors::Blue500);
     computeC(svd);
@@ -113,8 +114,6 @@ void Homography::computeB()
 {
     EASY_FUNCTION(profiler::colors::Magenta);
     Eigen::MatrixXd B(8, 9);
-    // Eigen::MatrixXd curr(3, 4);
-    // Eigen::MatrixXd next(4, 3);
     // cv::Mat board(1000, 1000, CV_8UC3, cv::Scalar::all(255));
 
     int row = 1;
@@ -137,16 +136,13 @@ void Homography::computeB()
 
         B.block<1, 9>(2 * row - 2, 0) = A1;
         B.block<1, 9>(2 * row - 1, 0) = A2;
-        // curr.block<3, 1>(0, row - 1) = P;
-        // next.block<1, 3>(row - 1, 0) = N;
         ++row;
     }
     EASY_END_BLOCK;
     // cv::imshow("a", board);
     // cv::waitKey(0);
     B_ = B;
-    // curr_ = curr;
-    // next_ = next;
+
 }
 
 void Homography::computeC(const Eigen::JacobiSVD<Eigen::MatrixXd> &svd)
@@ -167,7 +163,6 @@ void Homography::compute2D()
     EASY_FUNCTION(profiler::colors::Magenta);
     auto T = (C_ * curr_);                              // col이 3인 형태 (x, y, a)
     auto pred = T.array().rowwise() / T.row(2).array(); // (x/a, y/a, 1)
-    // std::cout << "pred" << pred.transpose() << std::endl;
 
     pred_ = pred;
 }
@@ -177,7 +172,7 @@ void Homography::computeInliers()
     EASY_FUNCTION(profiler::colors::Magenta);
 
     int cnt = 0;
-    std::size_t len = sorted_.size();
+    double error{0};
 
     for (int i = 0; i < n_; ++i)
     {
@@ -189,8 +184,10 @@ void Homography::computeInliers()
 
         double e = std::sqrt((n_x - p_x) * (n_x - p_x) + (n_y - p_y) * (n_y - p_y));
         cnt = e < res_th_ ? cnt + 1 : cnt;
+        error += e;
     }
     inliers_ = cnt;
+    error_ = error / n_;
 }
 
 void Homography::computeRMSE()
@@ -202,10 +199,6 @@ void Homography::computeRMSE()
 
     for (int i = 0; i < len; ++i)
     {
-        // auto c_x = static_cast<int>(std::round(gt(i,0)));
-        // auto c_y = static_cast<int>(std::round(gt(i,1)));
-        // auto n_x = static_cast<int>(std::round(pred(i,0)));
-        // auto n_y = static_cast<int>(std::round(pred(i,1)));
 
         auto p_x = pred_(i, 0);
         auto p_y = pred_(i, 1);
@@ -224,15 +217,15 @@ void Homography::computeRMSE()
     error_ = error / len;
 }
 
-double Homography::getInliers()
-{
-    return inliers_;
-}
+// double Homography::getInliers()
+// {
+//     return inliers_;
+// }
 
-double Homography::getError()
-{
-    return error_;
-}
+// double Homography::getError()
+// {
+//     return error_;
+// }
 Eigen::MatrixXd &Homography::getHomography()
 {
     return C_;

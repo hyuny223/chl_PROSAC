@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(MODULE_SOURCE_FILES
     src/detect.cpp
     src/homography.cpp
-    src/RANSAC.cpp
 )
 
 find_package(OpenCV 4.5.5 REQUIRED)

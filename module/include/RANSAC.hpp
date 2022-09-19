@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <random>
 
 #include "opencv2/opencv.hpp"
 
@@ -33,16 +34,16 @@ class PROSAC
 protected:
     MODEL model_, candidate_;
 
-    std::vector<std::vector<cv::DMatch>> sorted_, match_;
+    std::vector<std::vector<cv::DMatch>> sorted_, n_match_, m_match_;
     std::vector<cv::KeyPoint> keys1_, keys2_;
 
     double best_model_err_ = std::numeric_limits<double>::infinity();
     double candidate_model_err_ = std::numeric_limits<double>::infinity();
 
     int iteration_;
-    int N_, m_, ns_, TN_, Tn_;
+    int N_, n_, m_, ns_, TN_;
 
-    double threshold_;
+    double threshold_, Tn_, Tpn_;
 
     double eta_ = 0.05, psi_ = 0.05, beta_ = 0.1;
     double max_outlier_ = 0.6;
@@ -59,16 +60,42 @@ public:
         : keys1_(keys1), keys2_(keys2), iteration_(iteration), threshold_(threshold), model_(model)
     {
         N_ = matches.size();
-        m_ = 10;
-        std::sort(matches.begin(), matches.end(), [](auto i, auto j){ return i[0].distance / i[1].distance < j[0].distance / j[1].distance ? 1 : 0; });
+        n_ = 4;
+        m_ = 4;
+        Tn_ = 1.0;
+        Tpn_ = 1.0;
+
+        // 퀄리티가 좋은게 뒤로 가게 함으로써 vector에서 pop하기 좋게 만든다.
+        std::sort(matches.begin(), matches.end(), [](auto i, auto j)
+                  { return i[0].distance / i[1].distance > j[0].distance / j[1].distance ? 1 : 0; });
         sorted_ = matches;
     }
 
     MODEL run()
     {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+
         for (int t = 0; t < iteration_; ++t)
         {
-            makeSubset(m_);
+
+            // 1. Choice of the hypothesis genration set
+            if (t == Tpn_ && n_ < N_)
+            {
+                n_ += 1;
+            }
+
+            // 2. Semi-random sample M of size m
+            if (Tpn_ < t)
+            {
+                // if T'_{n} < t, then the sample contains m-1 points selected from U_{n-1} at random and u_{n}
+                m_ -= 1;
+            }
+            // else select m poins from U_{n} at random
+            makeSubset(); // N개 중 top n개의 subset을 만든다.
+            sampling();   // n개 중 m개를 무직위 샘플링
+
+            // 3. Model parameter estimation
             if (iterate())
             {
                 if (best_model_err_ < threshold_)
@@ -81,6 +108,11 @@ public:
                     candidate_ = model_;
                 }
             }
+            // 4. Compute Tpn_
+            double Tnn_ = (n_ + 1.0) / (n_ + 1.0 - m) * Tn_;
+            double Tpn_ = Tpn_ + Tnn_ - Tn_;
+            Tn_ = Tnn_;
+
             ++m_;
         }
         std::cout << "candidate!" << std::endl;
@@ -88,7 +120,7 @@ public:
     }
     bool iterate()
     {
-        model_.run(match_, keys1_, keys2_);
+        model_.run(m_match_, keys1_, keys2_);
         auto err = model_.getError();
 
         if (err < best_model_err_)
@@ -99,12 +131,21 @@ public:
         return false;
     }
 
-    void makeSubset(const int &m)
+    void makeSubset()
     {
         // 최소 5개부터는 시작해야 호모그래피를 찾을 수 있음
         // 지금은 슬라이싱으로 하고 있는데, 기존 벡터에 뒤에 하나만 덫붙이는 방식으로 가능할 듯
-        std::vector<std::vector<cv::DMatch>> match(sorted_.begin(), sorted_.begin() + m);
-        match_ = match;
+        if (n_ == 10)
+        {
+            for (int i = 0; i < n_; ++i)
+            {
+                n_match_.push_back(sorted_.back());
+                sorted_.pop_back();
+            }
+            return;
+        }
+        n_match_.push_back(sorted_.back());
+        sorted_.pop_back();
     }
 
     MODEL &getModel()
@@ -114,10 +155,10 @@ public:
 
     auto maximality()
     {
-        int n_inlier = static_cast<int>((1 - max_outlier_) * N_);
+        int n_inlier = static_cast<int>((1 - max_outlier_) * n_);
 
         double Pi{1.0};
-        for(int i = 0; i < m_; ++i)
+        for (int i = 0; i < m_; ++i)
         {
             Pi *= (n_inlier - i) / (N_ - i);
         }
@@ -129,6 +170,19 @@ public:
     // {
     //     ()
     // }
+
+    auto sampling(cstd::mt19937 &gen)
+    {
+        std::uniform_int_distribution<int> dis(0, m_ - 1); // n개의 subset 중 m개를 샘플링
+
+        m_match_.clear();
+        m_match_.reserve(m_);
+
+        for (int i = 0; i < m_; ++i)
+        {
+            m_match_.push_back(n_matche_[gen(dis)]); // 중복 검사 안 해줘도 될까?
+        }
+    }
 };
 
 #endif

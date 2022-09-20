@@ -26,13 +26,14 @@ protected:
 
     double res_th_{10.0};
     int n_;
+
 public:
     double error_;
     int inliers_{0};
 
 public:
     Homography() = default;
-    void set(const std::vector<std::vector<cv::DMatch>>& sorted,
+    void set(const std::vector<std::vector<cv::DMatch>> &sorted,
              const std::vector<cv::KeyPoint> &keys1,
              const std::vector<cv::KeyPoint> &keys2);
     bool check(int n);
@@ -40,10 +41,9 @@ public:
     void run(int n, std::mt19937 &gen);
     void computeSVD();
     void computeB();
-    void computeC(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd);
+    void computeC(const Eigen::JacobiSVD<Eigen::MatrixXd> &svd);
     void compute2D();
     void computeInliers();
-    void computeRMSE();
     Eigen::MatrixXd &getHomography();
 };
 

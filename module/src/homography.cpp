@@ -142,7 +142,6 @@ void Homography::computeB()
     // cv::imshow("a", board);
     // cv::waitKey(0);
     B_ = B;
-
 }
 
 void Homography::computeC(const Eigen::JacobiSVD<Eigen::MatrixXd> &svd)
@@ -189,34 +188,6 @@ void Homography::computeInliers()
     inliers_ = cnt;
     error_ = error / n_;
 }
-
-void Homography::computeRMSE()
-{
-    std::size_t len = sorted_.size();
-
-    double error{0};
-    double lowest = std::numeric_limits<double>::lowest();
-
-    for (int i = 0; i < len; ++i)
-    {
-
-        auto p_x = pred_(i, 0);
-        auto p_y = pred_(i, 1);
-        auto n_x = next_(i, 0);
-        auto n_y = next_(i, 1);
-
-        double e = std::sqrt((n_x - p_x) * (n_x - p_x) + (n_y - p_y) * (n_y - p_y));
-        error += e;                       // prosac 논문에서는 lowest quality of data가 subset의 퀄리티가 된다고 하였는데, 그냥 RMSE로 계산하였다.
-        lowest = e > lowest ? e : lowest; // 이게 원래 논문 방식. lowest가 error가 크다는 의미.
-    }
-
-    std::cout << "The number of points : " << len << std::endl;
-    std::cout << "RMSE : " << error / len << std::endl;
-    std::cout << "lowest : " << lowest << std::endl;
-
-    error_ = error / len;
-}
-
 Eigen::MatrixXd &Homography::getHomography()
 {
     return C_;

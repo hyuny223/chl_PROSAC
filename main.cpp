@@ -27,9 +27,12 @@ int main(int argc, char** argv)
     prosac.run();
     auto e = std::chrono::steady_clock::now();
     std::chrono::duration<double> t = e - s;
-    std::cout << "my : " << t.count() << std::endl;
+    std::cout << std::endl;
+    std::cout << "my time : " << t.count() << std::endl;
 
     auto model = prosac.getModel();
+    std::cout << "my error : " << model.error_ << std::endl;
+    std::cout << std::endl;
     dm.show(model.getHomography());
-    profiler::dumpBlocksToFile("../profiler/dev_profile.prof");
+    // profiler::dumpBlocksToFile("../profiler/dev_profile.prof");
 }

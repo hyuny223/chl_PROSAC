@@ -23,8 +23,11 @@
 ![image](https://user-images.githubusercontent.com/58837749/191145840-6db590fc-17a4-431e-a5c5-117fade1564b.png)  
 결과적으로 13번의 iterate 만으로 꽤나 정확한 값을 찾아내었다. 
 ```bash
-my : 0.00436513
-opencv : 0.000159192
+my time : 0.00436513
+my error : 0.8654
+
+opencv time : 0.000159192
+opencv error : 17.0182
 ```
 Stopping Criterion을 구현할 수 있다면 위에서 언급한 파라미터를 휴리스틱 방식이 아닌, 수학적 모델로 계산하여 모델의 일반화를 이룰 수 있을 것이다.  
 논외로 매칭점을 sorting하는 부분도 시간이 꽤나 걸린다. 

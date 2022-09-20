@@ -38,9 +38,9 @@ protected:
     std::vector<std::vector<cv::DMatch>> sorted_, n_match_, m_match_;
     std::vector<cv::KeyPoint> keys1_, keys2_;
 
-    double best_model_inliers_ = std::numeric_limits<double>::lowest();
+    // double best_model_inliers_ = std::numeric_limits<double>::lowest();
     double candidate_model_inliers_ = std::numeric_limits<double>::lowest();
-    double lowest_model_error_ = std::numeric_limits<double>::infinity();
+    // double lowest_model_error_ = std::numeric_limits<double>::infinity();
     double candidate_model_error_ = std::numeric_limits<double>::infinity();
 
     int iteration_;
@@ -64,7 +64,8 @@ public:
     {
         EASY_BLOCK("PROSAC INITIALIZE", profiler::colors::Blue500);
         N_ = matches.size();
-        threshold_ = N_ * threshold;
+        // threshold_ = N_ * threshold;
+        threshold_ = threshold;
         n_ = 4;
         m_ = 4;
         Tn_ = 1.0;
@@ -90,9 +91,6 @@ public:
         EASY_BLOCK("iteration", profiler::colors::Blue500);
         for (int t = 1; t < iteration_; ++t)
         {
-            // std::cout << "n_ : " << n_ << std::endl;
-            // std::cout << "m_ : " << m_ << std::endl;
-            // std::cout << "Tpn_ :" << Tpn_ << std::endl;
 
             // 1. Choice of the hypothesis genration set
             if (t == static_cast<int>(Tpn_) && n_ < N_)
@@ -115,28 +113,21 @@ public:
             EASY_BLOCK("iterate", profiler::colors::Blue500);
             if (iterate(gen))
             {
-                if (best_model_inliers_ > threshold_)
+                if (candidate_model_error_ < threshold_)
                 {
-                    std::cout << "model!" << std::endl;
+                    std::cout << "[ MODEL ]" << std::endl;
+                    std::cout << "the number of inliers of model : " << model_.inliers_ << std::endl;
+                    std::cout << "the lowest error of model : " << model_.error_ << std::endl;
                     return model_;
-                }
-                if (model_.inliers_ > candidate_model_inliers_)
-                {
-                    candidate_ = model_;
-                }
-                else if (model_.inliers_ == candidate_model_inliers_)
-                {
-                    if(model_.error_ < candidate_model_error_)
-                    {
-                        candidate_ = model_;
-                    }
                 }
             }
             EASY_END_BLOCK;
             // m값 복구
             m_ = 4;
         }
-        std::cout << "candidate!" << std::endl;
+        std::cout << "[ CANDIDATE ]" << std::endl;
+        std::cout << "the number of inliers so far : " << candidate_.inliers_ << std::endl;
+        std::cout << "the lowest error so far : " << candidate_.error_ << std::endl;
         return candidate_;
     }
     bool iterate(std::mt19937 &gen)
@@ -145,22 +136,16 @@ public:
         EASY_BLOCK("model run", profiler::colors::Blue500);
         model_.run(n_, gen);
         EASY_END_BLOCK;
+        std::cout << "[ MODEL ]" << std::endl;
         std::cout << "the number of inliers : " << model_.inliers_ << std::endl;
-        std::cout << "the lowest error of model : " << model_.error_ << std::endl;
-        std::cout << "---------" << std::endl;
+        std::cout << "the error : " << model_.error_ << std::endl;
+        std::cout << std::endl;
 
-        if (model_.inliers_ > best_model_inliers_)
+        if (model_.inliers_ >= 7 && 0.01 < model_.error_ && model_.error_< candidate_model_error_)
         {
-            best_model_inliers_ = model_.inliers_ ;
-            lowest_model_error_ = model_.error_;
+            candidate_model_error_ = model_.error_;
+            candidate_ = model_;
             return true;
-        }
-        else if (model_.inliers_  == best_model_inliers_)
-        {
-            if(model_.error_ < lowest_model_error_)
-            {
-                return true;
-            }
         }
         return false;
     }

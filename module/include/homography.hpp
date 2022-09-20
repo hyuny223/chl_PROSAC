@@ -44,8 +44,6 @@ public:
     void compute2D();
     void computeInliers();
     void computeRMSE();
-    // double getInliers();
-    // double getError();
     Eigen::MatrixXd &getHomography();
 };
 

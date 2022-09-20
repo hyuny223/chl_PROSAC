@@ -217,15 +217,6 @@ void Homography::computeRMSE()
     error_ = error / len;
 }
 
-// double Homography::getInliers()
-// {
-//     return inliers_;
-// }
-
-// double Homography::getError()
-// {
-//     return error_;
-// }
 Eigen::MatrixXd &Homography::getHomography()
 {
     return C_;

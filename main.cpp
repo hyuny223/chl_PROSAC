@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     auto [matches, keys1, keys2] = dm.run();
     auto s = std::chrono::steady_clock::now();
     Homography h;
-    PROSAC<Homography> prosac(matches, keys1, keys2, 100, 0.1, h);
+    PROSAC<Homography> prosac(matches, keys1, keys2, 100, 1, h);
     prosac.run();
     auto e = std::chrono::steady_clock::now();
     std::chrono::duration<double> t = e - s;
@@ -31,5 +31,5 @@ int main(int argc, char** argv)
 
     auto model = prosac.getModel();
     dm.show(model.getHomography());
-    profiler::dumpBlocksToFile("../profiler/thin_profile.prof");
+    profiler::dumpBlocksToFile("../profiler/dev_profile.prof");
 }
